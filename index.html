@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Totally Not a Rick Roll</title>
+  <style>
+    :root { --bg: #0f172a; --card: #111827; --text: #e5e7eb; --muted: #9ca3af; --accent: #60a5fa; }
+    * { box-sizing: border-box; }
+    html, body { height: 100%; }
+    body {
+      margin: 0;
+      background: radial-gradient(1000px 600px at 50% -10%, #1f2937 0, var(--bg) 60%);
+      color: var(--text);
+      font: 16px/1.5 system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      display: grid; place-items: center;
+    }
+    .card {
+      width: min(560px, 92vw);
+      background: linear-gradient(180deg, #0b1220, var(--card));
+      border: 1px solid #1f2937;
+      border-radius: 20px;
+      box-shadow: 0 20px 60px rgba(0,0,0,.35), inset 0 1px 0 rgba(255,255,255,.04);
+      padding: 28px;
+      text-align: center;
+    }
+    h1 { margin: 0 0 6px; font-weight: 800; letter-spacing: .2px; }
+    p { margin: 0 0 18px; color: var(--muted); }
+    .cta {
+      display: inline-flex; align-items: center; gap: 10px;
+      background: linear-gradient(180deg, #2563eb, #1d4ed8);
+      color: white; border: 0; padding: 14px 18px; border-radius: 14px;
+      font-weight: 700; cursor: pointer; user-select: none;
+      box-shadow: 0 10px 24px rgba(37, 99, 235, .35);
+      transition: transform .08s ease, filter .2s ease;
+    }
+    .cta:hover { filter: brightness(1.05); }
+    .cta:active { transform: translateY(1px) scale(.995); }
+    .disclaimer { font-size: 12px; color: #93c5fd; opacity: .9; margin-top: 10px; }
+    .hide { display: none !important; }
+
+    /* Fullscreen player backdrop */
+    .player-backdrop {
+      position: fixed; inset: 0; background: black; display: grid; place-items: center; z-index: 9999;
+    }
+    video { width: 100%; height: 100%; object-fit: contain; background: black; }
+    .skip { position: fixed; top: 12px; right: 12px; z-index: 10000; opacity: .85; }
+  </style>
+</head>
+<body>
+  <main class="card" role="main">
+    <h1>Click for a surprise 🎁</h1>
+    <p>It’s totally not a classic internet joke. Pinky promise.</p>
+    <button id="surpriseBtn" class="cta" aria-haspopup="dialog" aria-controls="rickroll-player">
+      <svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+      Reveal the surprise
+    </button>
+    <div class="disclaimer">Audio will play after you click.</div>
+  </main>
+
+  <!-- Hidden player template -->
+  <template id="playerTemplate">
+    <div class="player-backdrop" role="dialog" aria-label="Never Gonna Give You Up video" id="rickroll-player">
+      <button class="cta skip" id="closePlayer" title="Close">✕</button>
+      <video id="rickVideo" playsinline preload="auto" src="assets/rick-astley.mp4"></video>
+    </div>
+  </template>
+
+  <script>
+    (function () {
+      const btn = document.getElementById('surpriseBtn');
+      const tpl = document.getElementById('playerTemplate');
+
+      async function goFullscreen(el) {
+        try {
+          if (el.requestFullscreen) await el.requestFullscreen();
+          else if (el.webkitRequestFullscreen) await el.webkitRequestFullscreen();
+          else if (el.msRequestFullscreen) await el.msRequestFullscreen();
+        } catch (e) { /* ignore */ }
+      }
+
+      function mountPlayer() {
+        const node = tpl.content.cloneNode(true);
+        document.body.appendChild(node);
+        const video = document.getElementById('rickVideo');
+        const close = document.getElementById('closePlayer');
+
+        close.addEventListener('click', () => teardown());
+        document.addEventListener('keydown', escClose);
+
+        // Start the show 🎶
+        const start = async () => {
+          try {
+            await video.play();
+          } catch (err) {
+            // If autoplay-with-gesture still fails (rare), unmute controls to let user start manually
+            video.controls = true;
+          }
+          goFullscreen(video);
+        };
+        start();
+      }
+
+      function escClose(e) { if (e.key === 'Escape') teardown(); }
+
+      function teardown() {
+        const wrap = document.getElementById('rickroll-player');
+        if (!wrap) return;
+        const video = document.getElementById('rickVideo');
+        try { video.pause(); } catch {}
+        wrap.remove();
+        document.removeEventListener('keydown', escClose);
+        if (document.fullscreenElement) document.exitFullscreen().catch(() => {});
+      }
+
+      btn.addEventListener('click', () => {
+        // Respect reduced motion users by offering a clear choice
+        const prefersReduced = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+        if (prefersReduced && !confirm('This will play a video with audio. Continue?')) return;
+        mountPlayer();
+      });
+
+      // Optional: if someone clicks anywhere in the card, also trigger it
+      document.querySelector('.card').addEventListener('click', (e) => {
+        if (e.target.closest('#surpriseBtn')) return; // already handled
+        btn.click();
+      });
+    })();
+  </script>
+</body>
+</html>
